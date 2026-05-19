@@ -1,9 +1,9 @@
-local Players = game:GetService("Players")
-local lp = Players.LocalPlayer
-
 local imgui = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/HacksCreator102/ImGUI-/refs/heads/main/source.lua"
 ))()
+
+local Players = game:GetService("Players")
+local lp = Players.LocalPlayer
 
 --// SETTINGS
 local running = false
@@ -39,7 +39,7 @@ local function stopFarm()
     running = false
 
     imgui:notify(
-        "BABFT Autofarm",
+        "BABFT",
         "Autofarm Disabled",
         "rbxassetid://6031091004"
     )
@@ -54,7 +54,7 @@ local function startFarm()
     running = true
 
     imgui:notify(
-        "BABFT Autofarm",
+        "BABFT",
         "Autofarm Enabled",
         "rbxassetid://6031075938"
     )
@@ -101,13 +101,13 @@ local window = imgui:createWindow({
     }
 })
 
---// MAIN TAB
-local main = window:createTab("Autofarm")
+--// AUTOFARM TAB
+local autofarm = window:createTab("Autofarm")
 
-local statusLabel = main:AddLabel("Status : Stopped")
-local positionLabel = main:AddLabel("Position : 0")
+local statusLabel = autofarm:AddLabel("Status : Stopped")
+local posLabel = autofarm:AddLabel("Position : 0")
 
-main:AddToggle({
+autofarm:AddToggle({
     Name = "Enable Autofarm",
     Default = false,
 
@@ -121,7 +121,7 @@ main:AddToggle({
     end
 })
 
-main:AddSlider({
+autofarm:AddSlider({
     Name = "Teleport Delay",
     Min = 1,
     Max = 10,
@@ -132,14 +132,14 @@ main:AddSlider({
         teleportDelay = v
 
         imgui:notify(
-            "Delay Changed",
+            "Delay",
             "Delay set to "..v,
             "rbxassetid://6031280882"
         )
     end
 })
 
-main:AddButton({
+autofarm:AddButton({
     Name = "Teleport To End",
 
     Callback = function()
@@ -159,7 +159,7 @@ main:AddButton({
     end
 })
 
-main:AddButton({
+autofarm:AddButton({
     Name = "Stop Autofarm",
 
     Callback = function()
@@ -169,31 +169,6 @@ main:AddButton({
 
 --// PLAYER TAB
 local playerTab = window:createTab("Player")
-
-playerTab:AddButton({
-    Name = "Reset Character",
-
-    Callback = function()
-
-        local char = getCharacter()
-
-        if char then
-            char:BreakJoints()
-        end
-    end
-})
-
-playerTab:AddButton({
-    Name = "Rejoin Server",
-
-    Callback = function()
-
-        game:GetService("TeleportService"):Teleport(
-            game.PlaceId,
-            lp
-        )
-    end
-})
 
 playerTab:AddTextbox({
     Name = "WalkSpeed",
@@ -233,8 +208,35 @@ playerTab:AddTextbox({
     end
 })
 
+playerTab:AddButton({
+    Name = "Reset Character",
+
+    Callback = function()
+
+        local char = getCharacter()
+
+        if char then
+            char:BreakJoints()
+        end
+    end
+})
+
 --// MISC TAB
 local misc = window:createTab("Misc")
+
+misc:AddTextbox({
+    Name = "Notification",
+    Placeholder = "Type text...",
+
+    Callback = function(text)
+
+        imgui:notify(
+            "Custom Notification",
+            text,
+            "rbxassetid://6031280882"
+        )
+    end
+})
 
 misc:AddButton({
     Name = "Copy Discord",
@@ -245,22 +247,8 @@ misc:AddButton({
 
         imgui:notify(
             "Discord",
-            "Copied invite to clipboard",
+            "Copied invite",
             "rbxassetid://6031075938"
-        )
-    end
-})
-
-misc:AddTextbox({
-    Name = "Notification",
-    Placeholder = "Type notification...",
-
-    Callback = function(text)
-
-        imgui:notify(
-            "Custom Notification",
-            text,
-            "rbxassetid://6031280882"
         )
     end
 })
@@ -288,7 +276,7 @@ task.spawn(function()
             "Status : "..(running and "Running" or "Stopped")
         )
 
-        positionLabel:SetText(
+        posLabel:SetText(
             "Position : "..tostring(currentPosition)
         )
     end
