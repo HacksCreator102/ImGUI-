@@ -135,7 +135,75 @@ function imgui:createWindow(settings)
     title.TextColor3 = Color3.new(1,1,1)
     title.TextSize = 15
     title.TextXAlignment = Enum.TextXAlignment.Left
+--// CLOSE BUTTON
+local closeButton = Instance.new("TextButton")
+closeButton.Parent = topbar
+closeButton.Size = UDim2.new(0, 28, 0, 28)
+closeButton.Position = UDim2.new(1, -34, 0, 3)
+closeButton.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+closeButton.BorderSizePixel = 0
+closeButton.Text = "X"
+closeButton.Font = Enum.Font.GothamBold
+closeButton.TextColor3 = Color3.new(1,1,1)
+closeButton.TextSize = 14
 
+local closeCorner = Instance.new("UICorner")
+closeCorner.Parent = closeButton
+closeCorner.CornerRadius = UDim.new(1,0)
+
+closeButton.MouseButton1Click:Connect(function()
+    gui:Destroy()
+end)
+
+--// MINIMIZE BUTTON
+local minimized = false
+local oldSize = mainframe.Size
+
+local miniButton = Instance.new("TextButton")
+miniButton.Parent = topbar
+miniButton.Size = UDim2.new(0, 28, 0, 28)
+miniButton.Position = UDim2.new(1, -68, 0, 3)
+miniButton.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+miniButton.BorderSizePixel = 0
+miniButton.Text = "-"
+miniButton.Font = Enum.Font.GothamBold
+miniButton.TextColor3 = Color3.new(1,1,1)
+miniButton.TextSize = 18
+
+local miniCorner = Instance.new("UICorner")
+miniCorner.Parent = miniButton
+miniCorner.CornerRadius = UDim.new(1,0)
+
+miniButton.MouseButton1Click:Connect(function()
+
+    minimized = not minimized
+
+    if minimized then
+
+        oldSize = mainframe.Size
+
+        contentHolder.Visible = false
+        tabsHolder.Visible = false
+
+        mainframe.Size = UDim2.new(
+            oldSize.X.Scale,
+            oldSize.X.Offset,
+            0,
+            35
+        )
+
+        miniButton.Text = "+"
+
+    else
+
+        contentHolder.Visible = true
+        tabsHolder.Visible = true
+
+        mainframe.Size = oldSize
+
+        miniButton.Text = "-"
+    end
+end)
     -- TABS HOLDER
     local tabsHolder = Instance.new("Frame")
     tabsHolder.Parent = mainframe
