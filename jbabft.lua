@@ -3,12 +3,23 @@ local imgui = loadstring(game:HttpGet(
 ))()
 
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
 local lp = Players.LocalPlayer
 
 --// SETTINGS
 local running = false
 local currentPosition = 0
 local teleportDelay = 1.2
+
+local autoPlatform = true
+local platformTransparency = 0
+local platformMaterial = Enum.Material.Neon
+
+local walkSpeedValue = 16
+local jumpPowerValue = 50
+
+local spawnedPlatforms = {}
 
 local positions = {
     CFrame.new(-51.5656433, 65.0000458, 1369.09009),
@@ -21,7 +32,7 @@ local positions = {
     CFrame.new(-51.5656433, 65.0000458, 6759.08984),
     CFrame.new(-51.5656433, 65.0000458, 7529.08984),
     CFrame.new(-51.5656433, 65.0000458, 8299.08984),
-    CFrame.new(-55.7065125, -358.739624, 9492.35645, 0, 0, -1, 0, 1, 0, 1, 0, 0)
+    CFrame.new(-55.7065125, -358.739624, 9492.35645)
 }
 
 --// HELPERS
@@ -31,6 +42,54 @@ end
 
 local function getHRP()
     return getCharacter():WaitForChild("HumanoidRootPart")
+end
+
+local function getHumanoid()
+    return getCharacter():WaitForChild("Humanoid")
+end
+
+--// PLATFORM
+local function createPlatform(cf)
+
+    if not autoPlatform then
+        return
+    end
+
+    local platform = Instance.new("Part")
+
+    platform.Name = "BABFT_PLATFORM"
+    platform.Anchored = true
+    platform.CanCollide = true
+    platform.Size = Vector3.new(30,1,30)
+
+    --// -5 below player
+    platform.CFrame = cf * CFrame.new(0,-5,0)
+
+    platform.Material = platformMaterial
+    platform.Transparency = platformTransparency
+
+    platform.Color = Color3.fromRGB(0,255,255)
+
+    platform.Parent = workspace
+
+    table.insert(spawnedPlatforms, platform)
+end
+
+local function clearPlatforms()
+
+    for _,v in pairs(spawnedPlatforms) do
+        pcall(function()
+            v:Destroy()
+        end)
+    end
+
+    table.clear(spawnedPlatforms)
+
+    imgui:notify(
+        "Platforms",
+        "Cleared all platforms",
+        "rbxassetid://6031071053"
+    )
 end
 
 --// AUTOFARM
@@ -74,7 +133,11 @@ local function startFarm()
                     local hrp = getHRP()
 
                     if hrp then
+
+                        createPlatform(cf)
+
                         hrp.CFrame = cf
+
                         currentPosition = i
                     end
                 end)
@@ -93,11 +156,6 @@ local window = imgui:createWindow({
     Main = {
         Name = "VCL Hub",
         Creator = "Denis"
-    },
-
-    Discord = {
-        Enabled = false,
-        Link = ""
     }
 })
 
@@ -105,7 +163,7 @@ local window = imgui:createWindow({
 local autofarm = window:createTab("Autofarm")
 
 local statusLabel = autofarm:AddLabel("Status : Stopped")
-local posLabel = autofarm:AddLabel("Position : 0")
+local positionLabel = autofarm:AddLabel("Position : 0")
 
 autofarm:AddToggle({
     Name = "Enable Autofarm",
@@ -121,6 +179,22 @@ autofarm:AddToggle({
     end
 })
 
+autofarm:AddToggle({
+    Name = "Auto Platform",
+    Default = true,
+
+    Callback = function(v)
+
+        autoPlatform = v
+
+        imgui:notify(
+            "Platform",
+            "Auto Platform : "..tostring(v),
+            "rbxassetid://6031280882"
+        )
+    end
+})
+
 autofarm:AddSlider({
     Name = "Teleport Delay",
     Min = 1,
@@ -130,12 +204,26 @@ autofarm:AddSlider({
     Callback = function(v)
 
         teleportDelay = v
+    end
+})
 
-        imgui:notify(
-            "Delay",
-            "Delay set to "..v,
-            "rbxassetid://6031280882"
-        )
+autofarm:AddSlider({
+    Name = "Platform Transparency",
+    Min = 0,
+    Max = 10,
+    Default = 0,
+
+    Callback = function(v)
+
+        platformTransparency = v / 10
+    end
+})
+
+autofarm:AddButton({
+    Name = "Clear Platforms",
+
+    Callback = function()
+        clearPlatforms()
     end
 })
 
@@ -147,111 +235,150 @@ autofarm:AddButton({
         local hrp = getHRP()
 
         if hrp then
-
             hrp.CFrame = positions[#positions]
-
-            imgui:notify(
-                "Teleport",
-                "Teleported to end",
-                "rbxassetid://6031071053"
-            )
         end
-    end
-})
-
-autofarm:AddButton({
-    Name = "Stop Autofarm",
-
-    Callback = function()
-        stopFarm()
     end
 })
 
 --// PLAYER TAB
-local playerTab = window:createTab("Player")
+local player = window:createTab("Player")
 
-playerTab:AddTextbox({
+player:AddSlider({
     Name = "WalkSpeed",
-    Placeholder = "Enter speed...",
+    Min = 16,
+    Max = 200,
+    Default = 16,
 
-    Callback = function(text)
+    Callback = function(v)
 
-        local speed = tonumber(text)
+        walkSpeedValue = v
 
-        if speed then
+        local hum = getHumanoid()
 
-            local hum = getCharacter():FindFirstChildOfClass("Humanoid")
-
-            if hum then
-                hum.WalkSpeed = speed
-            end
+        if hum then
+            hum.WalkSpeed = v
         end
     end
 })
 
-playerTab:AddTextbox({
+player:AddSlider({
     Name = "JumpPower",
-    Placeholder = "Enter jump power...",
+    Min = 50,
+    Max = 300,
+    Default = 50,
 
-    Callback = function(text)
+    Callback = function(v)
 
-        local jp = tonumber(text)
+        jumpPowerValue = v
 
-        if jp then
+        local hum = getHumanoid()
 
-            local hum = getCharacter():FindFirstChildOfClass("Humanoid")
-
-            if hum then
-                hum.JumpPower = jp
-            end
+        if hum then
+            hum.JumpPower = v
         end
     end
 })
 
-playerTab:AddButton({
-    Name = "Reset Character",
+player:AddButton({
+    Name = "Infinite Jump",
 
     Callback = function()
 
-        local char = getCharacter()
+        imgui:notify(
+            "Infinite Jump",
+            "Enabled",
+            "rbxassetid://6031075938"
+        )
 
-        if char then
-            char:BreakJoints()
-        end
+        local UIS = game:GetService("UserInputService")
+
+        UIS.JumpRequest:Connect(function()
+
+            local hum = getHumanoid()
+
+            if hum then
+                hum:ChangeState(Enum.HumanoidStateType.Jumping)
+            end
+        end)
     end
 })
 
---// MISC TAB
-local misc = window:createTab("Misc")
+player:AddButton({
+    Name = "Fly",
 
-misc:AddTextbox({
-    Name = "Notification",
-    Placeholder = "Type text...",
+    Callback = function()
 
-    Callback = function(text)
+        local hrp = getHRP()
+
+        local bv = Instance.new("BodyVelocity")
+        bv.MaxForce = Vector3.new(999999,999999,999999)
+        bv.Velocity = Vector3.zero
+        bv.Parent = hrp
+
+        RunService.RenderStepped:Connect(function()
+
+            bv.Velocity =
+                workspace.CurrentCamera.CFrame.LookVector * 80
+        end)
 
         imgui:notify(
-            "Custom Notification",
-            text,
+            "Fly",
+            "Fly Enabled",
+            "rbxassetid://6031075938"
+        )
+    end
+})
+
+--// VISUAL TAB
+local visual = window:createTab("Visual")
+
+visual:AddButton({
+    Name = "Neon Platforms",
+
+    Callback = function()
+
+        platformMaterial = Enum.Material.Neon
+
+        imgui:notify(
+            "Visual",
+            "Neon Material Enabled",
             "rbxassetid://6031280882"
         )
     end
 })
 
-misc:AddButton({
-    Name = "Copy Discord",
+visual:AddButton({
+    Name = "ForceField Platforms",
 
     Callback = function()
 
-        setclipboard("discord.gg/example")
+        platformMaterial = Enum.Material.ForceField
 
         imgui:notify(
-            "Discord",
-            "Copied invite",
-            "rbxassetid://6031075938"
+            "Visual",
+            "ForceField Material Enabled",
+            "rbxassetid://6031280882"
         )
     end
 })
+
+visual:AddButton({
+    Name = "Glass Platforms",
+
+    Callback = function()
+
+        platformMaterial = Enum.Material.Glass
+
+        imgui:notify(
+            "Visual",
+            "Glass Material Enabled",
+            "rbxassetid://6031280882"
+        )
+    end
+})
+
+--// MISC TAB
+local misc = window:createTab("Misc")
 
 misc:AddButton({
     Name = "Destroy UI",
@@ -267,6 +394,18 @@ misc:AddButton({
     end
 })
 
+misc:AddButton({
+    Name = "Rejoin",
+
+    Callback = function()
+
+        game:GetService("TeleportService"):Teleport(
+            game.PlaceId,
+            lp
+        )
+    end
+})
+
 --// UPDATE LOOP
 task.spawn(function()
 
@@ -276,7 +415,7 @@ task.spawn(function()
             "Status : "..(running and "Running" or "Stopped")
         )
 
-        posLabel:SetText(
+        positionLabel:SetText(
             "Position : "..tostring(currentPosition)
         )
     end
