@@ -1,5 +1,9 @@
 local imgui = {}
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local mouse = player:GetMouse()
 
+mouse.Icon = "rbxassetid://84128666510737"
 --// NOTIFY
 function imgui:notify(title, text, icon)
 
