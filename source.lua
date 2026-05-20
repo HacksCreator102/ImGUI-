@@ -413,100 +413,341 @@ end)
             end)
         end
 
-        --// SLIDER
-        function tab:AddSlider(settings)
+        --// ADVANCED SLIDER
+function tab:AddSlider(settings)
 
-            settings = settings or {}
+    settings = settings or {}
 
-            local value = settings.Default or 0
+    local UIS = game:GetService("UserInputService")
+    local TweenService = game:GetService("TweenService")
 
-            local sliderFrame = Instance.new("Frame")
-            sliderFrame.Parent = pageHolder
-            sliderFrame.Size = UDim2.new(1,-10,0,50)
-            sliderFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
-            sliderFrame.BorderSizePixel = 0
+    -- SETTINGS
+    local min = settings.Min or 0
+    local max = settings.Max or 100
+    local default = settings.Default or min
+    local increment = settings.Increment or 1
 
-            local corner = Instance.new("UICorner")
-            corner.Parent = sliderFrame
-            corner.CornerRadius = UDim.new(0,6)
+    local sliderColor = settings.SliderColor or Color3.fromRGB(255,255,255)
+    local backgroundColor = settings.BackgroundColor or Color3.fromRGB(30,30,30)
+    local barColor = settings.BarColor or Color3.fromRGB(45,45,45)
 
-            local title = Instance.new("TextLabel")
-            title.Parent = sliderFrame
-            title.BackgroundTransparency = 1
-            title.Size = UDim2.new(1,0,0,20)
-            title.Text =
-                (settings.Name or "Slider")
-                .." : "
-                ..tostring(value)
+    local showValue = settings.ShowValue ~= false
+    local precise = settings.Precise or false
+    local suffix = settings.Suffix or ""
 
-            title.Font = Enum.Font.Gotham
-            title.TextColor3 = Color3.new(1,1,1)
-            title.TextSize = 14
+    local callback = settings.Callback
 
-            local bar = Instance.new("Frame")
-            bar.Parent = sliderFrame
-            bar.Position = UDim2.new(0,10,0,30)
-            bar.Size = UDim2.new(1,-20,0,10)
-            bar.BackgroundColor3 = Color3.fromRGB(45,45,45)
-            bar.BorderSizePixel = 0
+    local value = math.clamp(default, min, max)
+    local dragging = false
 
-            local fill = Instance.new("Frame")
-            fill.Parent = bar
-            fill.Size = UDim2.new(0.5,0,1,0)
-            fill.BackgroundColor3 = Color3.new(1,1,1)
-            fill.BorderSizePixel = 0
+    -- FRAME
+    local sliderFrame = Instance.new("Frame")
+    sliderFrame.Parent = pageHolder
+    sliderFrame.Size = UDim2.new(1,-10,0,65)
+    sliderFrame.BackgroundColor3 = backgroundColor
+    sliderFrame.BorderSizePixel = 0
 
-            local dragging = false
+    local frameCorner = Instance.new("UICorner")
+    frameCorner.Parent = sliderFrame
+    frameCorner.CornerRadius = UDim.new(0,8)
 
-            bar.InputBegan:Connect(function(input)
+    -- STROKE
+    local stroke = Instance.new("UIStroke")
+    stroke.Parent = sliderFrame
+    stroke.Color = Color3.fromRGB(55,55,55)
+    stroke.Thickness = 1
 
-                if input.UserInputType ==
-                    Enum.UserInputType.MouseButton1 then
+    -- TITLE
+    local title = Instance.new("TextLabel")
+    title.Parent = sliderFrame
+    title.BackgroundTransparency = 1
+    title.Position = UDim2.new(0,12,0,5)
+    title.Size = UDim2.new(1,-24,0,20)
+    title.Font = Enum.Font.GothamBold
+    title.TextColor3 = Color3.new(1,1,1)
+    title.TextSize = 14
+    title.TextXAlignment = Enum.TextXAlignment.Left
 
-                    dragging = true
-                end
-            end)
+    -- VALUE LABEL
+    local valueLabel = Instance.new("TextLabel")
+    valueLabel.Parent = sliderFrame
+    valueLabel.BackgroundTransparency = 1
+    valueLabel.Position = UDim2.new(1,-70,0,5)
+    valueLabel.Size = UDim2.new(0,60,0,20)
+    valueLabel.Font = Enum.Font.Gotham
+    valueLabel.TextColor3 = Color3.fromRGB(220,220,220)
+    valueLabel.TextSize = 13
+    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
 
-            game:GetService("UserInputService").InputEnded:Connect(function(input)
+    -- BAR
+    local bar = Instance.new("Frame")
+    bar.Parent = sliderFrame
+    bar.Position = UDim2.new(0,12,0,38)
+    bar.Size = UDim2.new(1,-24,0,10)
+    bar.BackgroundColor3 = barColor
+    bar.BorderSizePixel = 0
 
-                if input.UserInputType ==
-                    Enum.UserInputType.MouseButton1 then
+    local barCorner = Instance.new("UICorner")
+    barCorner.Parent = bar
+    barCorner.CornerRadius = UDim.new(1,0)
 
-                    dragging = false
-                end
-            end)
+    -- FILL
+    local fill = Instance.new("Frame")
+    fill.Parent = bar
+    fill.Size = UDim2.new(0,0,1,0)
+    fill.BackgroundColor3 = sliderColor
+    fill.BorderSizePixel = 0
 
-            game:GetService("UserInputService").InputChanged:Connect(function(input)
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.Parent = fill
+    fillCorner.CornerRadius = UDim.new(1,0)
 
-                if dragging and
-                    input.UserInputType ==
-                    Enum.UserInputType.MouseMovement then
+    -- GLOW
+    local glow = Instance.new("UIStroke")
+    glow.Parent = fill
+    glow.Color = sliderColor
+    glow.Thickness = 1.5
+    glow.Transparency = 0.4
 
-                    local sizeX = math.clamp(
-                        (input.Position.X - bar.AbsolutePosition.X)
-                        / bar.AbsoluteSize.X,
-                        0,
-                        1
-                    )
+    -- KNOB
+    local knob = Instance.new("Frame")
+    knob.Parent = bar
+    knob.Size = UDim2.new(0,18,0,18)
+    knob.AnchorPoint = Vector2.new(0.5,0.5)
+    knob.Position = UDim2.new(0,0,0.5,0)
+    knob.BackgroundColor3 = sliderColor
+    knob.BorderSizePixel = 0
 
-                    fill.Size = UDim2.new(sizeX,0,1,0)
+    local knobCorner = Instance.new("UICorner")
+    knobCorner.Parent = knob
+    knobCorner.CornerRadius = UDim.new(1,0)
 
-                    value = math.floor(
-                        ((settings.Max - settings.Min) * sizeX)
-                        + settings.Min
-                    )
+    local knobStroke = Instance.new("UIStroke")
+    knobStroke.Parent = knob
+    knobStroke.Color = Color3.new(1,1,1)
+    knobStroke.Thickness = 1
 
-                    title.Text =
-                        (settings.Name or "Slider")
-                        .." : "
-                        ..tostring(value)
+    -- SHADOW
+    local shadow = Instance.new("ImageLabel")
+    shadow.Parent = knob
+    shadow.BackgroundTransparency = 1
+    shadow.AnchorPoint = Vector2.new(0.5,0.5)
+    shadow.Position = UDim2.new(0.5,0,0.5,0)
+    shadow.Size = UDim2.new(1,14,1,14)
+    shadow.Image = "rbxassetid://6015897843"
+    shadow.ImageTransparency = 0.5
+    shadow.ZIndex = 0
 
-                    if settings.Callback then
-                        settings.Callback(value)
-                    end
-                end
-            end)
+    -- RIPPLE
+    local ripple = Instance.new("Frame")
+    ripple.Parent = knob
+    ripple.AnchorPoint = Vector2.new(0.5,0.5)
+    ripple.Position = UDim2.new(0.5,0,0.5,0)
+    ripple.Size = UDim2.new(0,0,0,0)
+    ripple.BackgroundColor3 = sliderColor
+    ripple.BackgroundTransparency = 0.5
+    ripple.ZIndex = 0
+
+    local rippleCorner = Instance.new("UICorner")
+    rippleCorner.Parent = ripple
+    rippleCorner.CornerRadius = UDim.new(1,0)
+
+    -- ROUND FUNCTION
+    local function round(num, step)
+
+        if precise then
+            return math.floor(num / step + 0.5) * step
         end
+
+        return math.floor(num + 0.5)
+    end
+
+    -- UPDATE
+    local function updateSlider(x)
+
+        local percent = math.clamp(
+            (x - bar.AbsolutePosition.X) / bar.AbsoluteSize.X,
+            0,
+            1
+        )
+
+        value = min + ((max - min) * percent)
+        value = round(value, increment)
+
+        local fillPercent = (value - min) / (max - min)
+
+        -- TWEEN
+        TweenService:Create(
+            fill,
+            TweenInfo.new(
+                0.08,
+                Enum.EasingStyle.Quart,
+                Enum.EasingDirection.Out
+            ),
+            {
+                Size = UDim2.new(fillPercent,0,1,0)
+            }
+        ):Play()
+
+        TweenService:Create(
+            knob,
+            TweenInfo.new(
+                0.08,
+                Enum.EasingStyle.Quart,
+                Enum.EasingDirection.Out
+            ),
+            {
+                Position = UDim2.new(fillPercent,0,0.5,0),
+                Size = dragging
+                    and UDim2.new(0,22,0,22)
+                    or UDim2.new(0,18,0,18)
+            }
+        ):Play()
+
+        title.Text = settings.Name or "Slider"
+
+        if showValue then
+            valueLabel.Text = tostring(value)..suffix
+        else
+            valueLabel.Text = ""
+        end
+
+        if callback then
+            callback(value)
+        end
+    end
+
+    -- INITIAL
+    task.defer(function()
+
+        local startPercent = (value - min) / (max - min)
+
+        fill.Size = UDim2.new(startPercent,0,1,0)
+        knob.Position = UDim2.new(startPercent,0,0.5,0)
+
+        title.Text = settings.Name or "Slider"
+
+        if showValue then
+            valueLabel.Text = tostring(value)..suffix
+        end
+    end)
+
+    -- CLICK EFFECT
+    local function rippleEffect()
+
+        ripple.Size = UDim2.new(0,0,0,0)
+        ripple.BackgroundTransparency = 0.5
+
+        TweenService:Create(
+            ripple,
+            TweenInfo.new(
+                0.35,
+                Enum.EasingStyle.Quad,
+                Enum.EasingDirection.Out
+            ),
+            {
+                Size = UDim2.new(0,45,0,45),
+                BackgroundTransparency = 1
+            }
+        ):Play()
+    end
+
+    -- HOVER
+    knob.MouseEnter:Connect(function()
+
+        TweenService:Create(
+            knob,
+            TweenInfo.new(0.15),
+            {
+                BackgroundColor3 = Color3.fromRGB(
+                    math.clamp(sliderColor.R*255+25,0,255),
+                    math.clamp(sliderColor.G*255+25,0,255),
+                    math.clamp(sliderColor.B*255+25,0,255)
+                )
+            }
+        ):Play()
+    end)
+
+    knob.MouseLeave:Connect(function()
+
+        TweenService:Create(
+            knob,
+            TweenInfo.new(0.15),
+            {
+                BackgroundColor3 = sliderColor
+            }
+        ):Play()
+    end)
+
+    -- INPUT
+    bar.InputBegan:Connect(function(input)
+
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+
+            dragging = true
+
+            rippleEffect()
+            updateSlider(input.Position.X)
+
+            TweenService:Create(
+                stroke,
+                TweenInfo.new(0.15),
+                {
+                    Color = sliderColor
+                }
+            ):Play()
+        end
+    end)
+
+    UIS.InputChanged:Connect(function(input)
+
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            updateSlider(input.Position.X)
+        end
+    end)
+
+    UIS.InputEnded:Connect(function(input)
+
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+
+            dragging = false
+
+            TweenService:Create(
+                knob,
+                TweenInfo.new(0.1),
+                {
+                    Size = UDim2.new(0,18,0,18)
+                }
+            ):Play()
+
+            TweenService:Create(
+                stroke,
+                TweenInfo.new(0.15),
+                {
+                    Color = Color3.fromRGB(55,55,55)
+                }
+            ):Play()
+        end
+    end)
+
+    -- METHODS
+    local sliderFunctions = {}
+
+    function sliderFunctions:Set(v)
+
+        value = math.clamp(v,min,max)
+        updateSlider(
+            bar.AbsolutePosition.X
+            + ((value-min)/(max-min))*bar.AbsoluteSize.X
+        )
+    end
+
+    function sliderFunctions:Get()
+        return value
+    end
+
+    return sliderFunctions
+end
 
         return tab
     end
